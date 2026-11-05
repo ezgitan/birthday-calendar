@@ -43,8 +43,9 @@ class Reminders {
             AndroidFlutterLocalNotificationsPlugin
           >()!;
       final allowed = await android.requestNotificationsPermission() ?? false;
-      if (allowed && requestExactTime)
+      if (allowed && requestExactTime) {
         await android.requestExactAlarmsPermission();
+      }
       return allowed;
     }
     return await plugin

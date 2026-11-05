@@ -11,6 +11,7 @@ import 'package:flutter/foundation.dart';
 import 'package:intl/intl.dart';
 import 'birthday.dart';
 import 'reminders.dart';
+import 'opening.dart';
 
 const ink = Color(0xFF353448);
 const purple = Color(0xFF8472BA);
@@ -64,6 +65,7 @@ class Home extends StatefulWidget {
 
 class _HomeState extends State<Home> with WidgetsBindingObserver {
   final reminders = Reminders();
+  final openingDone = Completer<void>();
   List<Birthday> people = [];
   SharedPreferences? prefs;
   int page = 0;
@@ -116,38 +118,33 @@ class _HomeState extends State<Home> with WidgetsBindingObserver {
         loaded = true;
         busy = ask;
       });
+      await syncWidgets();
       if (ask) {
-        WidgetsBinding.instance.addPostFrameCallback((_) async {
-          if (!mounted) return;
-          try {
-            await prefs!.setBool('firstNotificationPrompt', true);
-            final granted = await reminders.request(requestExactTime: false);
-            await prefs!.setBool('notifications', granted);
-            if (mounted) setState(() => enabled = granted);
-          } catch (_) {
-            message('Bildirimleri Ayarlar’dan açabilirsin.');
-          } finally {
-            if (mounted) {
-              setState(() => busy = false);
-              await sync();
-            }
+        await openingDone.future;
+        if (!mounted) return;
+        try {
+          await prefs!.setBool('firstNotificationPrompt', true);
+          final granted = await reminders.request(requestExactTime: false);
+          await prefs!.setBool('notifications', granted);
+          if (mounted) setState(() => enabled = granted);
+        } catch (_) {
+          message('Bildirimleri Ayarlar’dan açabilirsin.');
+        } finally {
+          if (mounted) {
+            setState(() => busy = false);
+            await sync();
           }
-        });
+        }
       } else {
         await sync();
       }
     } catch (_) {
+      if (mounted) setState(() => loaded = true);
       message('Kayıtlar yüklenemedi. Uygulamayı yeniden açmayı deneyin.');
     }
   }
 
-  Future<void> sync() async {
-    try {
-      await reminders.sync(people, enabled);
-    } catch (_) {
-      reminders.status =
-          'Bildirimler planlanamadı. İzinleri kontrol edip tekrar deneyin.';
-    }
+  Future<void> syncWidgets() async {
     if (!kIsWeb &&
         (defaultTargetPlatform == TargetPlatform.android ||
             defaultTargetPlatform == TargetPlatform.iOS)) {
@@ -178,6 +175,16 @@ class _HomeState extends State<Home> with WidgetsBindingObserver {
         message('Ana ekran kartı güncellenemedi.');
       }
     }
+  }
+
+  Future<void> sync() async {
+    await syncWidgets();
+    try {
+      await reminders.sync(people, enabled);
+    } catch (_) {
+      reminders.status =
+          'Bildirimler planlanamadı. İzinleri kontrol edip tekrar deneyin.';
+    }
     if (mounted) setState(() {});
   }
 
@@ -203,7 +210,10 @@ class _HomeState extends State<Home> with WidgetsBindingObserver {
       isScrollControlled: true,
       useSafeArea: true,
       backgroundColor: const Color(0xFFFAF8F5),
-      builder: (_) => PersonEditor(person: person),
+      builder: (_) => PersonEditor(
+        person: person,
+        initialDate: page == 1 ? selected : null,
+      ),
     );
     if (result != null) {
       await save([...people.where((p) => p.id != result.id), result]);
@@ -243,142 +253,162 @@ class _HomeState extends State<Home> with WidgetsBindingObserver {
     child: child,
   );
   @override
-  Widget build(BuildContext context) => Scaffold(
-    body: SafeArea(
-      child: Center(
-        child: ConstrainedBox(
-          constraints: const BoxConstraints(maxWidth: 920),
-          child: !loaded
-              ? const Center(child: CircularProgressIndicator())
-              : ListView(
-                  padding: const EdgeInsets.fromLTRB(24, 24, 24, 100),
-                  children: [
-                    Row(
+  Widget build(BuildContext context) => LaunchSurface(
+    child: OpeningAnimation(
+      ready: loaded,
+      onComplete: () {
+        unawaited(LaunchSurface.signal('homeVisible'));
+        if (!openingDone.isCompleted) openingDone.complete();
+      },
+      child: Scaffold(
+        body: SafeArea(
+          child: Center(
+            child: ConstrainedBox(
+              constraints: const BoxConstraints(maxWidth: 920),
+              child: !loaded
+                  ? const Center(child: CircularProgressIndicator())
+                  : ListView(
+                      padding: const EdgeInsets.fromLTRB(24, 24, 24, 100),
                       children: [
-                        Semantics(
-                          label: 'İyi ki',
-                          image: true,
-                          child: Row(
-                            children: [
-                              ClipRRect(
-                                borderRadius: BorderRadius.circular(16),
-                                child: Stack(
-                                  alignment: Alignment.center,
-                                  children: [
-                                    logoPart(36, 36, 120, Offset.zero),
-                                    Transform.scale(
-                                      scale: 0.86,
-                                      child: logoPart(
-                                        36,
-                                        36,
-                                        120,
-                                        const Offset(-42, -26.25),
-                                      ),
+                        Row(
+                          children: [
+                            Semantics(
+                              label: 'İyi ki',
+                              image: true,
+                              child: Row(
+                                children: [
+                                  ClipRRect(
+                                    borderRadius: BorderRadius.circular(16),
+                                    child: Stack(
+                                      alignment: Alignment.center,
+                                      children: [
+                                        logoPart(36, 36, 120, Offset.zero),
+                                        Transform.scale(
+                                          scale: 0.86,
+                                          child: logoPart(
+                                            36,
+                                            36,
+                                            120,
+                                            const Offset(-42, -26.25),
+                                          ),
+                                        ),
+                                      ],
                                     ),
-                                  ],
-                                ),
+                                  ),
+                                  const SizedBox(width: 8),
+                                  Text(
+                                    'iyi ki',
+                                    style: Theme.of(context)
+                                        .textTheme
+                                        .titleLarge
+                                        ?.copyWith(
+                                          fontFamily: 'Chewy',
+                                          color: Colors.black,
+                                        ),
+                                  ),
+                                ],
                               ),
-                              const SizedBox(width: 8),
+                            ),
+                            const Spacer(),
+                            if (page == 1)
+                              TextButton(
+                                onPressed: () => setState(() {
+                                  selected = dateOnly(DateTime.now());
+                                  month = DateTime(
+                                    selected.year,
+                                    selected.month,
+                                  );
+                                }),
+                                child: const Text('Bugüne dön'),
+                              )
+                            else
                               Text(
-                                'iyi ki',
-                                style: Theme.of(context).textTheme.titleLarge
-                                    ?.copyWith(
-                                      fontFamily: 'Chewy',
-                                      color: Colors.black,
-                                    ),
+                                DateFormat(
+                                  'd MMMM',
+                                  'tr',
+                                ).format(DateTime.now()),
+                                style: const TextStyle(color: Colors.black54),
                               ),
-                            ],
-                          ),
+                          ],
                         ),
-                        const Spacer(),
-                        if (page == 1)
-                          TextButton(
-                            onPressed: () => setState(() {
-                              selected = dateOnly(DateTime.now());
-                              month = DateTime(selected.year, selected.month);
-                            }),
-                            child: const Text('Bugüne dön'),
-                          )
-                        else
-                          Text(
-                            DateFormat('d MMMM', 'tr').format(DateTime.now()),
-                            style: const TextStyle(color: Colors.black54),
-                          ),
+                        const SizedBox(height: 30),
+                        ...switch (page) {
+                          0 => home(),
+                          1 => calendar(),
+                          _ => settings(),
+                        },
                       ],
                     ),
-                    const SizedBox(height: 30),
-                    ...switch (page) {
-                      0 => home(),
-                      1 => calendar(),
-                      _ => settings(),
-                    },
-                  ],
-                ),
+            ),
+          ),
         ),
-      ),
-    ),
-    floatingActionButton: loaded && page != 2
-        ? TapRegion(
-            onTapOutside: (_) {
-              if (addExpanded) setState(() => addExpanded = false);
-            },
-            child: AnimatedContainer(
-              duration: const Duration(milliseconds: 220),
-              curve: Curves.easeOut,
-              width: addExpanded ? 142 : 56,
-              height: 56,
-              child: FloatingActionButton(
-                tooltip: 'Tarih ekle',
-                backgroundColor: purple,
-                foregroundColor: Colors.white,
-                onPressed: busy
-                    ? null
-                    : () {
-                        if (!addExpanded) {
-                          setState(() => addExpanded = true);
-                          return;
-                        }
-                        setState(() => addExpanded = false);
-                        edit();
-                      },
-                child: ClipRect(
-                  child: Row(
-                    mainAxisAlignment: MainAxisAlignment.center,
-                    children: [
-                      const Icon(Icons.add),
-                      if (addExpanded)
-                        const Flexible(
-                          child: Text(
-                            ' Tarih ekle',
-                            maxLines: 1,
-                            softWrap: false,
-                            overflow: TextOverflow.clip,
-                          ),
-                        ),
-                    ],
+        floatingActionButton: loaded && page != 2
+            ? TapRegion(
+                onTapOutside: (_) {
+                  if (addExpanded) setState(() => addExpanded = false);
+                },
+                child: AnimatedContainer(
+                  duration: const Duration(milliseconds: 220),
+                  curve: Curves.easeOut,
+                  width: addExpanded ? 142 : 56,
+                  height: 56,
+                  child: FloatingActionButton(
+                    tooltip: 'Tarih ekle',
+                    backgroundColor: purple,
+                    foregroundColor: Colors.white,
+                    onPressed: busy
+                        ? null
+                        : () {
+                            if (!addExpanded) {
+                              setState(() => addExpanded = true);
+                              return;
+                            }
+                            setState(() => addExpanded = false);
+                            edit();
+                          },
+                    child: ClipRect(
+                      child: Row(
+                        mainAxisAlignment: MainAxisAlignment.center,
+                        children: [
+                          const Icon(Icons.add),
+                          if (addExpanded)
+                            const Flexible(
+                              child: Text(
+                                ' Tarih ekle',
+                                maxLines: 1,
+                                softWrap: false,
+                                overflow: TextOverflow.clip,
+                              ),
+                            ),
+                        ],
+                      ),
+                    ),
                   ),
                 ),
-              ),
+              )
+            : null,
+        bottomNavigationBar: NavigationBar(
+          selectedIndex: page,
+          onDestinationSelected: (i) => setState(() => page = i),
+          backgroundColor: Colors.white,
+          indicatorColor: const Color(0xFFEAE3F5),
+          destinations: const [
+            NavigationDestination(
+              icon: Icon(Icons.home_outlined),
+              selectedIcon: Icon(Icons.home_rounded),
+              label: 'Ana Sayfa',
             ),
-          )
-        : null,
-    bottomNavigationBar: NavigationBar(
-      selectedIndex: page,
-      onDestinationSelected: (i) => setState(() => page = i),
-      backgroundColor: Colors.white,
-      indicatorColor: const Color(0xFFEAE3F5),
-      destinations: const [
-        NavigationDestination(
-          icon: Icon(Icons.home_outlined),
-          selectedIcon: Icon(Icons.home_rounded),
-          label: 'Ana Sayfa',
+            NavigationDestination(
+              icon: Icon(Icons.calendar_month_outlined),
+              label: 'Takvim',
+            ),
+            NavigationDestination(
+              icon: Icon(Icons.tune_rounded),
+              label: 'Ayarlar',
+            ),
+          ],
         ),
-        NavigationDestination(
-          icon: Icon(Icons.calendar_month_outlined),
-          label: 'Takvim',
-        ),
-        NavigationDestination(icon: Icon(Icons.tune_rounded), label: 'Ayarlar'),
-      ],
+      ),
     ),
   );
   static const birthdayHeading = TextStyle(
@@ -938,12 +968,20 @@ class _HomeState extends State<Home> with WidgetsBindingObserver {
         ],
       ),
     ),
+    const SizedBox(height: 28),
+    const Center(
+      child: Text(
+        'İyi ki · 1.9.7',
+        style: TextStyle(fontSize: 11, color: Colors.black38),
+      ),
+    ),
   ];
 }
 
 class PersonEditor extends StatefulWidget {
   final Birthday? person;
-  const PersonEditor({super.key, this.person});
+  final DateTime? initialDate;
+  const PersonEditor({super.key, this.person, this.initialDate});
   @override
   State<PersonEditor> createState() => _PersonEditorState();
 }
@@ -1103,8 +1141,9 @@ class _PersonEditorState extends State<PersonEditor> {
     contactName = p?.contactName;
     phone.text = p?.phone ?? '';
     year = TextEditingController(text: p?.year?.toString());
-    day = p?.day ?? DateTime.now().day;
-    month = p?.month ?? DateTime.now().month;
+    final initialDate = widget.initialDate ?? DateTime.now();
+    day = p?.day ?? initialDate.day;
+    month = p?.month ?? initialDate.month;
     category = p?.category ?? 'Arkadaşlar';
     photo = p?.photo;
     dailyEnabled = p?.dailyDays != null;

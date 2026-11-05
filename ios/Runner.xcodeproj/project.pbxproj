@@ -599,21 +599,21 @@ CODE_SIGN_ENTITLEMENTS = Runner/Runner.entitlements;
 		};
 AA0000000000000000000011 = {isa = XCBuildConfiguration; buildSettings = {
 APPLICATION_EXTENSION_API_ONLY = YES; CODE_SIGN_ENTITLEMENTS = BirthdayWidget/BirthdayWidget.entitlements; CODE_SIGN_STYLE = Automatic;
-CURRENT_PROJECT_VERSION = 2; MARKETING_VERSION = 1.1.0; GENERATE_INFOPLIST_FILE = YES; INFOPLIST_FILE = BirthdayWidget/Info.plist;
+CURRENT_PROJECT_VERSION = 23; MARKETING_VERSION = 1.9.7; GENERATE_INFOPLIST_FILE = YES; INFOPLIST_FILE = BirthdayWidget/Info.plist;
 IPHONEOS_DEPLOYMENT_TARGET = 14.0; PRODUCT_BUNDLE_IDENTIFIER = com.birthdaycalendar.birthdayCalendar.BirthdayWidget;
 PRODUCT_NAME = "$(TARGET_NAME)"; SDKROOT = iphoneos; SKIP_INSTALL = YES; SWIFT_VERSION = 5.0; TARGETED_DEVICE_FAMILY = "1,2";
 LD_RUNPATH_SEARCH_PATHS = ("$(inherited)", "@executable_path/Frameworks", "@executable_path/../../Frameworks");
 }; name = Debug; };
 AA0000000000000000000012 = {isa = XCBuildConfiguration; buildSettings = {
 APPLICATION_EXTENSION_API_ONLY = YES; CODE_SIGN_ENTITLEMENTS = BirthdayWidget/BirthdayWidget.entitlements; CODE_SIGN_STYLE = Automatic;
-CURRENT_PROJECT_VERSION = 2; MARKETING_VERSION = 1.1.0; GENERATE_INFOPLIST_FILE = YES; INFOPLIST_FILE = BirthdayWidget/Info.plist;
+CURRENT_PROJECT_VERSION = 23; MARKETING_VERSION = 1.9.7; GENERATE_INFOPLIST_FILE = YES; INFOPLIST_FILE = BirthdayWidget/Info.plist;
 IPHONEOS_DEPLOYMENT_TARGET = 14.0; PRODUCT_BUNDLE_IDENTIFIER = com.birthdaycalendar.birthdayCalendar.BirthdayWidget;
 PRODUCT_NAME = "$(TARGET_NAME)"; SDKROOT = iphoneos; SKIP_INSTALL = YES; SWIFT_VERSION = 5.0; TARGETED_DEVICE_FAMILY = "1,2";
 LD_RUNPATH_SEARCH_PATHS = ("$(inherited)", "@executable_path/Frameworks", "@executable_path/../../Frameworks");
 }; name = Release; };
 AA0000000000000000000013 = {isa = XCBuildConfiguration; buildSettings = {
 APPLICATION_EXTENSION_API_ONLY = YES; CODE_SIGN_ENTITLEMENTS = BirthdayWidget/BirthdayWidget.entitlements; CODE_SIGN_STYLE = Automatic;
-CURRENT_PROJECT_VERSION = 2; MARKETING_VERSION = 1.1.0; GENERATE_INFOPLIST_FILE = YES; INFOPLIST_FILE = BirthdayWidget/Info.plist;
+CURRENT_PROJECT_VERSION = 23; MARKETING_VERSION = 1.9.7; GENERATE_INFOPLIST_FILE = YES; INFOPLIST_FILE = BirthdayWidget/Info.plist;
 IPHONEOS_DEPLOYMENT_TARGET = 14.0; PRODUCT_BUNDLE_IDENTIFIER = com.birthdaycalendar.birthdayCalendar.BirthdayWidget;
 PRODUCT_NAME = "$(TARGET_NAME)"; SDKROOT = iphoneos; SKIP_INSTALL = YES; SWIFT_VERSION = 5.0; TARGETED_DEVICE_FAMILY = "1,2";
 LD_RUNPATH_SEARCH_PATHS = ("$(inherited)", "@executable_path/Frameworks", "@executable_path/../../Frameworks");

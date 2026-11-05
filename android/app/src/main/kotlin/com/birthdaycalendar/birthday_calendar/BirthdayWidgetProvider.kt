@@ -43,6 +43,7 @@ open class BirthdayWidgetProvider : HomeWidgetProvider() {
         val prefs = context.getSharedPreferences("widget_pages", Context.MODE_PRIVATE)
         for (id in ids) {
             val small = this is SquareBirthdayWidgetProvider
+            val compact = !small && manager.getAppWidgetOptions(id).getInt(AppWidgetManager.OPTION_APPWIDGET_MIN_WIDTH, 300) < 260
             val pinned = prefs.getString("pin$id", "")
             val person = prefs.getString("person$id", "")
             val pool = if (!person.isNullOrEmpty()) events.filter { personKey(it.second) == person } else events.filter { it.second.optString("id") == pinned }.ifEmpty { events }
@@ -52,7 +53,7 @@ open class BirthdayWidgetProvider : HomeWidgetProvider() {
             val event = card?.second
             val theme = prefs.getInt("theme$id", if (prefs.getBoolean("dark$id",false)) 3 else 0).coerceIn(0,3)
             val dark = theme == 3
-            val rv = RemoteViews(context.packageName, if (small) R.layout.square_card else R.layout.birthday_widget)
+            val rv = RemoteViews(context.packageName, if (small) R.layout.square_card else if(compact) R.layout.compact_birthday_widget else R.layout.birthday_widget)
             val ink = android.graphics.Color.parseColor(if (dark) "#FCF7FF" else "#42364F")
             val accent = android.graphics.Color.parseColor(if (dark) "#DDC5FA" else "#70538E")
             rv.setInt(R.id.widget_root, "setBackgroundResource", listOf(R.drawable.widget_lavender,R.drawable.widget_blush,R.drawable.widget_cream,R.drawable.widget_dark)[theme])
@@ -63,19 +64,26 @@ open class BirthdayWidgetProvider : HomeWidgetProvider() {
                 rv.setInt(R.id.widget_call,"setBackgroundResource",listOf(R.drawable.call_lavender,R.drawable.call_blush,R.drawable.call_cream,R.drawable.call_dark)[theme])
             }
             rv.setTextColor(R.id.widget_name,ink)
-            val type = event?.optString("type","Doğum Günü") ?: "İyi ki"
-            if (!small) rv.setTextViewText(R.id.kind, if(type=="Diğer") event?.optString("customType") else type)
-            rv.setTextViewText(R.id.widget_name,event?.optString("personName", event.optString("name")) ?: "Özel gün ekle")
+            rv.setTextViewTextSize(R.id.widget_name, android.util.TypedValue.COMPLEX_UNIT_SP, if(event == null) (if(small) 14f else if(compact) 16f else 18f) else (if(small) 17f else if(compact) 16f else 20f))
+            rv.setBoolean(R.id.widget_name, "setSingleLine", small && event != null)
+            rv.setInt(R.id.widget_name, "setMaxLines", if(event == null || !small) 2 else 1)
+            val type = event?.optString("type","Doğum Günü") ?: ""
+            if (!small) {
+                rv.setTextViewText(R.id.kind, if(type=="Diğer") event?.optString("customType") else type)
+                rv.setViewVisibility(R.id.kind, if(event == null) View.GONE else View.VISIBLE)
+                rv.setViewVisibility(R.id.nav, if(event == null || (compact && cards.size < 2)) View.GONE else View.VISIBLE)
+            }
+            rv.setTextViewText(R.id.widget_name,event?.optString("personName", event.optString("name")) ?: "Güzel günler biriktir")
             val days = card?.let { ChronoUnit.DAYS.between(today,it.first) }
             rv.setTextViewText(R.id.widget_countdown, when(days) {
-                null -> "Takvimini aç"
+                null -> "İlk tarihini ekle  +"
                 0L -> "Bugün! 🎉"
                 1L -> "Yarın! 🎈"
                 else -> "$days gün kaldı"
             })
-            for (view in listOf(R.id.widget_prev,R.id.widget_next,R.id.dots)) rv.setViewVisibility(view, if(cards.size>1) View.VISIBLE else View.INVISIBLE)
+            for (view in listOf(R.id.widget_prev,R.id.widget_next,R.id.dots)) rv.setViewVisibility(view, if(cards.size>1) View.VISIBLE else View.GONE)
             val first = (index-2).coerceIn(0,(cards.size-5).coerceAtLeast(0))
-            rv.setTextViewText(R.id.dots,if(!small) "${index+1}/${cards.size}" else (first until minOf(first+5,cards.size)).joinToString(" ") { if(it==index) "●" else "○" })
+            rv.setTextViewText(R.id.dots,if(cards.size < 2) "" else if(!small) "${index+1}/${cards.size}" else (first until minOf(first+5,cards.size)).joinToString(" ") { if(it==index) "●" else "○" })
             for ((view,action) in listOf(R.id.widget_prev to "PREV",R.id.widget_next to "NEXT")) {
                 val intent = Intent(context,javaClass).setAction("com.birthdaycalendar.$action").putExtra(AppWidgetManager.EXTRA_APPWIDGET_ID,id)
                 rv.setOnClickPendingIntent(view,PendingIntent.getBroadcast(context,id,intent,PendingIntent.FLAG_UPDATE_CURRENT or PendingIntent.FLAG_IMMUTABLE))

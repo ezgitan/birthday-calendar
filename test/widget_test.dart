@@ -2,9 +2,15 @@ import 'package:flutter_test/flutter_test.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 import 'package:flutter/material.dart';
 import 'package:birthday_calendar/main.dart';
+import 'package:birthday_calendar/opening.dart';
 import 'package:birthday_calendar/birthday.dart';
 
 void main() {
+  TestWidgetsFlutterBinding.ensureInitialized();
+  setUp(() {
+    TestDefaultBinaryMessengerBinding.instance.defaultBinaryMessenger
+        .setMockMethodCallHandler(LaunchSurface.channel, (_) async => null);
+  });
   test(
     'Daily reminders cross New Year and merge overlapping single reminders',
     () {
