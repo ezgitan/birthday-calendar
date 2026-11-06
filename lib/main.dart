@@ -1,3 +1,4 @@
+import 'package:flutter/services.dart' show MethodChannel, PlatformException;
 import 'package:flutter_native_contact_picker/flutter_native_contact_picker.dart';
 import 'package:url_launcher/url_launcher.dart';
 import 'dart:async';
@@ -104,10 +105,15 @@ class _HomeState extends State<Home> with WidgetsBindingObserver {
     }
   }
 
+  bool recordsLoaded = false;
+  String? lastWidgetError;
+  static const iosWidget = MethodChannel('iyiki/widgetSnapshot');
+
   Future<void> load() async {
     try {
       prefs = await SharedPreferences.getInstance();
       people = Birthday.decode(prefs!.getString('birthdays') ?? '[]');
+      recordsLoaded = true;
       enabled = prefs!.getBool('notifications') ?? false;
       if (!mounted) return;
       final ask =
@@ -118,8 +124,8 @@ class _HomeState extends State<Home> with WidgetsBindingObserver {
         loaded = true;
         busy = ask;
       });
-      await syncWidgets();
       if (ask) {
+        await syncWidgets();
         await openingDone.future;
         if (!mounted) return;
         try {
@@ -150,7 +156,22 @@ class _HomeState extends State<Home> with WidgetsBindingObserver {
             defaultTargetPlatform == TargetPlatform.iOS)) {
       try {
         if (defaultTargetPlatform == TargetPlatform.iOS) {
-          await HomeWidget.setAppGroupId('group.com.birthdaycalendar.shared');
+          // Never replace a good snapshot with an empty list after a failed load.
+          if (!recordsLoaded) return;
+          await iosWidget.invokeMethod<void>(
+            'publish',
+            jsonEncode([
+              for (final person in people)
+                {
+                  'name': person.title,
+                  'phone': person.phone,
+                  'month': person.month,
+                  'day': person.day,
+                },
+            ]),
+          );
+          lastWidgetError = null;
+          return;
         }
         await HomeWidget.saveWidgetData<String>(
           'birthdays',
@@ -171,6 +192,19 @@ class _HomeState extends State<Home> with WidgetsBindingObserver {
           androidName: 'BirthdayWidgetProvider',
           iOSName: 'BirthdayWidget',
         );
+      } on PlatformException catch (error) {
+        if (defaultTargetPlatform == TargetPlatform.iOS) {
+          if (lastWidgetError != error.code) {
+            lastWidgetError = error.code;
+            message(
+              error.code == 'groupUnavailable'
+                  ? 'iOS widget ortak alanına erişilemiyor. App Group imzasını kontrol et.'
+                  : 'iOS widget verisi kaydedilemedi veya doğrulanamadı.',
+            );
+          }
+        } else {
+          message('Ana ekran kartı güncellenemedi.');
+        }
       } catch (_) {
         message('Ana ekran kartı güncellenemedi.');
       }
